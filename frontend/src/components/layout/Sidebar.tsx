@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import {
   AutoAwesomeRounded,
   DashboardRounded,
@@ -22,7 +24,10 @@ import {
   Divider,
 } from '@mui/material';
 
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+
+import { apiRequest } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const navigationItems = [
   { label: 'Overview', path: '/dashboard', icon: <DashboardRounded /> },
@@ -44,6 +49,38 @@ interface SidebarProps {
 }
 
 function Sidebar({ onNavigate }: SidebarProps) {
+  const navigate = useNavigate();
+  const { clearUser } = useAuth();
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    try {
+      await apiRequest('/auth/logout', {
+        method: 'POST',
+      });
+
+      clearUser();
+
+      onNavigate?.();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Logout failed:', error);
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Unable to log out. Please try again.'
+      );
+
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -164,11 +201,23 @@ function Sidebar({ onNavigate }: SidebarProps) {
           />
         </ListItemButton>
 
+        {/* Logout */}
         <ListItemButton
+          onClick={handleLogout}
+          disabled={isLoggingOut}
           sx={{
             borderRadius: 2,
             color: '#64748B',
             mt: 0.5,
+
+            '&:hover': {
+              bgcolor: '#FFF1F2',
+              color: '#E11D48',
+            },
+
+            '&.Mui-disabled': {
+              opacity: 0.6,
+            },
           }}
         >
           <ListItemIcon sx={{ color: 'inherit', minWidth: 38 }}>
@@ -176,7 +225,7 @@ function Sidebar({ onNavigate }: SidebarProps) {
           </ListItemIcon>
 
           <ListItemText
-            primary="Logout"
+            primary={isLoggingOut ? 'Logging out...' : 'Logout'}
             primaryTypographyProps={{
               fontSize: 13.5,
               fontWeight: 600,

@@ -1,5 +1,7 @@
 import { useState } from 'react';
+
 import {
+  Alert,
   Box,
   Button,
   Container,
@@ -18,12 +20,14 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-// Login validation schema
+import { apiRequest } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+
 const loginSchema = z.object({
   email: z.string().trim().email('Please enter a valid email address'),
   password: z.string().min(1, 'Password is required'),
@@ -31,8 +35,17 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+interface LoginResponse {
+  success: boolean;
+  message: string;
+}
+
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState('');
+
+  const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   const {
     register,
@@ -46,10 +59,42 @@ function Login() {
     },
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    console.log('Login form data:', data);
+  const onSubmit = async (data: LoginFormData) => {
+    setServerError('');
 
-    alert('Validation successful! Backend login will be connected next.');
+    try {
+      const response = await apiRequest<LoginResponse>(
+        '/auth/login',
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }
+      );
+
+      if (!response.success) {
+        setServerError(response.message || 'Login failed.');
+        return;
+      }
+
+      // Update the global authentication state.
+      const authenticatedUser = await refreshUser();
+
+      if (!authenticatedUser) {
+        setServerError(
+          'Login succeeded, but we could not verify your session. Please try again.'
+        );
+        return;
+      }
+
+      // Navigate only after authentication is verified.
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      if (error instanceof Error) {
+        setServerError(error.message);
+      } else {
+        setServerError('Something went wrong. Please try again.');
+      }
+    }
   };
 
   return (
@@ -102,6 +147,12 @@ function Login() {
           <Typography variant="body2" color="text.secondary" mb={4}>
             Enter your email and password below.
           </Typography>
+
+          {serverError && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {serverError}
+            </Alert>
+          )}
 
           <Box
             component="form"
@@ -242,3 +293,14 @@ function Login() {
 }
 
 export default Login;
+
+/*
+### Login Flow
+
+1. User submits email and password.
+2. Frontend sends credentials to the backend.
+3. Backend validates credentials and sets authentication cookies.
+4. Frontend calls `/api/auth/me`.
+5. `AuthContext` receives and stores the authenticated user.
+6. User is redirected to `/dashboard`.
+*/

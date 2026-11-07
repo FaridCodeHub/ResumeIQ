@@ -1,5 +1,7 @@
 import { useState } from 'react';
+
 import {
+  Alert,
   Box,
   Button,
   Container,
@@ -19,22 +21,33 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-// Registration validation schema
+import { apiRequest } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+
 const registerSchema = z
   .object({
-    name: z.string().trim().min(3, 'Name must contain at least 3 characters'),
+    name: z
+      .string()
+      .trim()
+      .min(3, 'Name must contain at least 3 characters')
+      .max(150, 'Name cannot exceed 150 characters'),
 
-    email: z.string().trim().email('Please enter a valid email address'),
+    email: z
+      .string()
+      .trim()
+      .email('Please enter a valid email address')
+      .max(255, 'Email cannot exceed 255 characters'),
 
     password: z
       .string()
       .min(8, 'Password must contain at least 8 characters')
+      .max(72, 'Password cannot exceed 72 characters')
       .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
       .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
       .regex(/[0-9]/, 'Password must contain at least one number'),
@@ -48,9 +61,18 @@ const registerSchema = z
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
+interface RegisterResponse {
+  success: boolean;
+  message: string;
+}
+
 function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [serverError, setServerError] = useState('');
+
+  const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   const {
     register,
@@ -66,10 +88,42 @@ function Register() {
     },
   });
 
-  const onSubmit = (data: RegisterFormData) => {
-    console.log('Registration form data:', data);
+  const onSubmit = async (data: RegisterFormData) => {
+    setServerError('');
 
-    alert('Validation successful! Backend registration will be connected next.');
+    try {
+      const response = await apiRequest<RegisterResponse>(
+        '/auth/register',
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }
+      );
+
+      if (!response.success) {
+        setServerError(response.message || 'Registration failed.');
+        return;
+      }
+
+      // Update global authentication state.
+      const authenticatedUser = await refreshUser();
+
+      if (!authenticatedUser) {
+        setServerError(
+          'Account created, but we could not verify your session. Please sign in.'
+        );
+        return;
+      }
+
+      // Navigate after the session has been verified.
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      if (error instanceof Error) {
+        setServerError(error.message);
+      } else {
+        setServerError('Something went wrong. Please try again.');
+      }
+    }
   };
 
   return (
@@ -80,11 +134,11 @@ function Register() {
         alignItems: 'center',
         background:
           'linear-gradient(135deg, #F7F6FF 0%, #FFFFFF 55%, #F0EEFF 100%)',
-        py: 5,
+        py: { xs: 2, sm: 2.5 },
       }}
     >
       <Container maxWidth="sm">
-        <Box textAlign="center" mb={4}>
+        <Box textAlign="center" mb={2}>
           <Stack
             direction="row"
             alignItems="center"
@@ -109,7 +163,7 @@ function Register() {
         <Paper
           elevation={0}
           sx={{
-            p: { xs: 3, sm: 5 },
+            p: { xs: 2, sm: 3, md: 3.5 },
             borderRadius: 4,
             border: '1px solid #EAE9F2',
             boxShadow: '0 20px 60px rgba(45, 35, 100, 0.08)',
@@ -119,12 +173,22 @@ function Register() {
             Create an account
           </Typography>
 
-          <Typography variant="body2" color="text.secondary" mb={4}>
+          <Typography variant="body2" color="text.secondary" mb={2}>
             Fill in your details to get started.
           </Typography>
 
-          <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-            <Stack spacing={2.5}>
+          {serverError && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {serverError}
+            </Alert>
+          )}
+
+          <Box
+            component="form"
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+          >
+            <Stack spacing={1.5}>
               <Box>
                 <Typography variant="body2" fontWeight={600} mb={1}>
                   Full Name
@@ -132,6 +196,7 @@ function Register() {
 
                 <TextField
                   fullWidth
+                  size="small"
                   placeholder="Enter your full name"
                   autoComplete="name"
                   {...register('name')}
@@ -154,6 +219,7 @@ function Register() {
 
                 <TextField
                   fullWidth
+                  size="small"
                   type="email"
                   placeholder="name@example.com"
                   autoComplete="email"
@@ -177,6 +243,7 @@ function Register() {
 
                 <TextField
                   fullWidth
+                  size="small"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Create a password"
                   autoComplete="new-password"
@@ -215,6 +282,7 @@ function Register() {
 
                 <TextField
                   fullWidth
+                  size="small"
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Confirm your password"
                   autoComplete="new-password"
@@ -271,7 +339,7 @@ function Register() {
             </Stack>
           </Box>
 
-          <Divider sx={{ my: 3 }} />
+          <Divider sx={{ my: 2 }} />
 
           <Typography textAlign="center" variant="body2" color="text.secondary">
             Already have an account?{' '}
@@ -295,7 +363,7 @@ function Register() {
           variant="caption"
           color="text.secondary"
           display="block"
-          mt={3}
+          mt={2}
         >
           © 2026 ResumeIQ. All rights reserved.
         </Typography>
@@ -305,3 +373,15 @@ function Register() {
 }
 
 export default Register;
+
+/*
+### Registration Flow
+
+After successful registration:
+
+1. Backend creates the user account.
+2. Backend sets authentication cookies.
+3. Frontend calls `/api/auth/me`.
+4. `AuthContext` stores the new user's information.
+5. User is redirected to the dashboard.
+*/
