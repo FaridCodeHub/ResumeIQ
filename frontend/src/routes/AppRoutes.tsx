@@ -11,7 +11,7 @@ import PagePlaceholder from '../components/dashboard/PagePlaceholder';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 
 import DashboardHome from '../pages/dashboard/DashboardHome';
-
+import ResumeUpload from '../pages/ResumeUpload';
 function AppRoutes() {
   return (
     <Routes>
@@ -43,7 +43,14 @@ function AppRoutes() {
             </DashboardLayout>
           }
         />
-
+        <Route
+          path="/upload-resume"
+          element={
+            <DashboardLayout pageTitle="Upload Resume">
+              <ResumeUpload onBack={() => window.history.back()} />
+            </DashboardLayout>
+          }
+        />
         <Route
           path="/jobs"
           element={

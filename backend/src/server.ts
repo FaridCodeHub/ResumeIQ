@@ -6,7 +6,7 @@ import cookieParser from 'cookie-parser';
 
 import { testDatabaseConnection } from './config/db.js';
 import authRoutes from './routes/auth.routes.js';
-
+import resumeRoutes from './routes/resume.routes.js';
 const app = express();
 
 const PORT = Number(process.env.PORT) || 5001;
@@ -47,7 +47,7 @@ app.get('/api/health', (_req, res) => {
 
 // Authentication routes
 app.use('/api/auth', authRoutes);
-
+app.use('/api/resumes', resumeRoutes);
 // Start server after database connection
 async function startServer(): Promise<void> {
   try {

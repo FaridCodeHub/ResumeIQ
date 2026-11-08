@@ -120,7 +120,7 @@ function DashboardHome() {
         <Button
           variant="contained"
           startIcon={<AddRounded />}
-          onClick={() => navigate('/upload')}
+          onClick={() => navigate('/upload-resume')}
           sx={{
             bgcolor: '#635BFF',
             borderRadius: 2,
@@ -336,7 +336,7 @@ function DashboardHome() {
                   fullWidth
                   variant="contained"
                   startIcon={<CloudUploadRounded />}
-                  onClick={() => navigate('/upload')}
+                  onClick={() => navigate('/upload-resume')}
                   sx={{
                     justifyContent: 'flex-start',
                     bgcolor: '#635BFF',

@@ -33,7 +33,9 @@ function DashboardLayout({
     <Box
       sx={{
         display: 'flex',
-        minHeight: '100vh',
+        height: '100dvh',
+        width: '100%',
+        overflow: 'hidden',
         bgcolor: '#F8FAFC',
       }}
     >
@@ -47,6 +49,7 @@ function DashboardLayout({
 
           '& .MuiDrawer-paper': {
             width: SIDEBAR_WIDTH,
+            height: '100dvh',
             boxSizing: 'border-box',
             border: 'none',
           },
@@ -81,8 +84,11 @@ function DashboardLayout({
         sx={{
           flexGrow: 1,
           minWidth: 0,
+          minHeight: 0,
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',
         }}
       >
         <Topbar
@@ -95,7 +101,11 @@ function DashboardLayout({
           component="main"
           sx={{
             flexGrow: 1,
-            p: { xs: 2, sm: 3, md: 4 },
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            boxSizing: 'border-box',
+            p: { xs: 1.5, sm: 2, md: 2 },
             width: '100%',
             maxWidth: 1600,
             mx: 'auto',

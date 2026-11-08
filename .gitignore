@@ -37,3 +37,7 @@ coverage/
 /dfd l 1.png
 /ER Diagram.jpg
 /ss/
+
+# Private uploaded resume files
+backend/storage/resumes/*
+!backend/storage/resumes/.gitkeep
