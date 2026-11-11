@@ -8,6 +8,11 @@ import { uploadResume } from '../config/upload.js';
 import {
   uploadResumeController,
   getUserResumesController,
+  getResumeDetailsController,
+  previewResumeController,
+  downloadResumeController,
+  renameResumeController,
+  deleteResumeController,
 } from '../controllers/resume.controller.js';
 
 const router = Router();
@@ -61,6 +66,36 @@ router.post(
 router.get(
   '/',
   getUserResumesController,
+);
+
+// Preview original PDF resume.
+router.get(
+  '/:resumeId/preview',
+  previewResumeController,
+);
+
+// Download original PDF or DOCX resume.
+router.get(
+  '/:resumeId/download',
+  downloadResumeController,
+);
+
+// Rename an existing resume.
+router.patch(
+  '/:resumeId',
+  renameResumeController,
+);
+
+// Delete an existing resume.
+router.delete(
+  '/:resumeId',
+  deleteResumeController,
+);
+
+// Get one resume with its extracted text.
+router.get(
+  '/:resumeId',
+  getResumeDetailsController,
 );
 
 export default router;

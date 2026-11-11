@@ -12,6 +12,8 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 
 import DashboardHome from '../pages/dashboard/DashboardHome';
 import ResumeUpload from '../pages/ResumeUpload';
+import MyResumes from '../pages/MyResumes';
+
 function AppRoutes() {
   return (
     <Routes>
@@ -36,13 +38,11 @@ function AppRoutes() {
           path="/resumes"
           element={
             <DashboardLayout pageTitle="My Resumes">
-              <PagePlaceholder
-                title="My Resumes"
-                description="Manage and review your uploaded resumes here."
-              />
+              <MyResumes />
             </DashboardLayout>
           }
         />
+
         <Route
           path="/upload-resume"
           element={
@@ -51,6 +51,7 @@ function AppRoutes() {
             </DashboardLayout>
           }
         />
+
         <Route
           path="/jobs"
           element={

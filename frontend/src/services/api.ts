@@ -132,7 +132,57 @@ export async function apiRequest<T>(
 
   return responseData as T;
 }
+// ==========================================
+// BINARY FILE API REQUEST
+// Used for PDF previews and file downloads.
+// ==========================================
 
+export async function apiBlobRequest(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Blob> {
+  if (!API_BASE_URL) {
+    throw new Error(
+      'API URL is not configured. Check frontend/.env.local.'
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await sendRequest(endpoint, options);
+
+    // Automatically refresh an expired access token.
+    if (
+      response.status === 401 &&
+      !shouldSkipRefresh(endpoint)
+    ) {
+      const refreshed = await refreshAccessToken();
+
+      if (refreshed) {
+        response = await sendRequest(endpoint, options);
+      }
+    }
+  } catch {
+    throw new Error(
+      'Unable to connect to the server. Please try again.'
+    );
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+
+    const error = errorData as ApiErrorResponse | null;
+
+    throw new ApiError(
+      error?.message || 'Unable to retrieve the requested file.',
+      response.status,
+      error?.errors
+    );
+  }
+
+  return response.blob();
+}
 /*
 | Functionality        | Purpose                                      |
 |----------------------|----------------------------------------------|
