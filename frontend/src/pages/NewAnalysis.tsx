@@ -268,13 +268,6 @@ function NewAnalysis() {
       {/* Page Heading */}
 
       <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h4"
-          fontWeight={700}
-          sx={{ mb: 1 }}
-        >
-          Start a New Analysis
-        </Typography>
 
         <Typography color="text.secondary">
           Select your resume and choose how you want ResumeIQ

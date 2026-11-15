@@ -1,4 +1,3 @@
-
 import {
   AppBar,
   Box,
@@ -23,8 +22,9 @@ import {
   SecurityRounded,
   TipsAndUpdatesRounded,
 } from '@mui/icons-material';
-import { useState } from 'react';
-import ResumeUpload from './pages/ResumeUpload';
+
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 
 const features = [
   {
@@ -48,11 +48,25 @@ const features = [
 ];
 
 function App() {
-  const [showUpload, setShowUpload] = useState(false);
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading } = useAuth();
 
-  if (showUpload) {
-    return <ResumeUpload onBack={() => setShowUpload(false)} />;
-  }
+  const handleGetStarted = () => {
+    if (isLoading) return;
+
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
+  };
+
+  const handleExploreFeatures = () => {
+    document.getElementById('features')?.scrollIntoView({
+      behavior: 'smooth',
+    });
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC', color: '#172033' }}>
       {/* Navigation */}
@@ -83,13 +97,19 @@ function App() {
               spacing={1}
               sx={{ display: { xs: 'none', sm: 'flex' } }}
             >
-              <Button color="inherit">Features</Button>
-              <Button color="inherit">How it works</Button>
+              <Button color="inherit" onClick={handleExploreFeatures}>
+                Features
+              </Button>
+
+              <Button color="inherit" onClick={handleExploreFeatures}>
+                How it works
+              </Button>
             </Stack>
 
             <Button
               variant="contained"
               endIcon={<ArrowForwardRounded />}
+              disabled={isLoading}
               sx={{
                 bgcolor: '#635BFF',
                 borderRadius: 2,
@@ -99,7 +119,7 @@ function App() {
                 fontWeight: 700,
                 '&:hover': { bgcolor: '#5046E5' },
               }}
-              onClick={() => setShowUpload(true)}
+              onClick={handleGetStarted}
             >
               Get Started
             </Button>
@@ -170,6 +190,7 @@ function App() {
                 variant="contained"
                 size="large"
                 endIcon={<ArrowForwardRounded />}
+                disabled={isLoading}
                 sx={{
                   bgcolor: '#635BFF',
                   borderRadius: 2.5,
@@ -181,13 +202,14 @@ function App() {
                   boxShadow: '0 8px 22px rgba(99,91,255,0.22)',
                   '&:hover': { bgcolor: '#5046E5' },
                 }}
-                onClick={() => setShowUpload(true)}
+                onClick={handleGetStarted}
               >
                 Analyze My Resume
               </Button>
 
               <Button
                 size="large"
+                onClick={handleExploreFeatures}
                 sx={{
                   color: '#334155',
                   textTransform: 'none',
@@ -224,22 +246,22 @@ function App() {
             }}
           >
             <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
-<Stack
-  direction="row"
-  justifyContent="space-between"
-  alignItems="center"
-  mb={4}
->
-  <Box>
-    <Typography variant="h6" fontWeight={800}>
-      Resume Overview
-    </Typography>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={4}
+              >
+                <Box>
+                  <Typography variant="h6" fontWeight={800}>
+                    Resume Overview
+                  </Typography>
 
-    <Typography variant="body2" color="text.secondary">
-      Sample analysis preview
-    </Typography>
-  </Box>
-</Stack>
+                  <Typography variant="body2" color="text.secondary">
+                    Sample analysis preview
+                  </Typography>
+                </Box>
+              </Stack>
 
               <Box
                 sx={{
@@ -391,7 +413,10 @@ function App() {
       </Container>
 
       {/* Features Section */}
-      <Box sx={{ bgcolor: '#FFFFFF', borderTop: '1px solid #E8EDF4' }}>
+      <Box
+        id="features"
+        sx={{ bgcolor: '#FFFFFF', borderTop: '1px solid #E8EDF4' }}
+      >
         <Container maxWidth="lg" sx={{ py: { xs: 7, md: 10 } }}>
           <Box sx={{ textAlign: 'center', maxWidth: 650, mx: 'auto', mb: 6 }}>
             <Typography
@@ -452,18 +477,18 @@ function App() {
                   },
                 }}
               >
-                  <CardContent
-                    sx={{
-                      p: { xs: 2.5, sm: 3.5 },
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      height: '100%',
-                      '&:last-child': {
-                        pb: { xs: 2.5, sm: 3.5 },
-                      },
-                    }}
-                  >
+                <CardContent
+                  sx={{
+                    p: { xs: 2.5, sm: 3.5 },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    height: '100%',
+                    '&:last-child': {
+                      pb: { xs: 2.5, sm: 3.5 },
+                    },
+                  }}
+                >
                   <Box
                     sx={{
                       width: 52,
@@ -491,6 +516,7 @@ function App() {
                   >
                     {feature.title}
                   </Typography>
+
                   <Typography
                     color="text.secondary"
                     sx={{
@@ -546,6 +572,7 @@ function App() {
             variant="contained"
             size="large"
             startIcon={<CloudUploadOutlined />}
+            disabled={isLoading}
             sx={{
               bgcolor: '#FFFFFF',
               color: '#5145CD',
@@ -557,7 +584,7 @@ function App() {
               whiteSpace: 'nowrap',
               '&:hover': { bgcolor: '#F0EFFF' },
             }}
-            onClick={() => setShowUpload(true)}
+            onClick={handleGetStarted}
           >
             Upload Your Resume
           </Button>

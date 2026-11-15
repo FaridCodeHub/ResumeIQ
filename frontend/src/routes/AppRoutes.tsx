@@ -9,6 +9,7 @@ import ForgotPassword from '../pages/auth/ForgotPassword';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import PagePlaceholder from '../components/dashboard/PagePlaceholder';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
+import PageTitle from '../components/common/PageTitle';
 
 import DashboardHome from '../pages/dashboard/DashboardHome';
 import ResumeUpload from '../pages/ResumeUpload';
@@ -20,130 +21,131 @@ import JobDescriptions from '../pages/JobDescriptions';
 
 function AppRoutes() {
   return (
-    <Routes>
-      {/* Public Pages */}
-      <Route path="/" element={<App />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
+    <>
+      <PageTitle />
 
-      {/* Protected Dashboard Pages */}
-      <Route element={<ProtectedRoute />}>
-        <Route
-          path="/dashboard"
-          element={
-            <DashboardLayout pageTitle="Overview">
-              <DashboardHome />
-            </DashboardLayout>
-          }
-        />
+      <Routes>
+        {/* Public Pages */}
+        <Route path="/" element={<App />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Route
-          path="/resumes"
-          element={
-            <DashboardLayout pageTitle="My Resumes">
-              <MyResumes />
-            </DashboardLayout>
-          }
-        />
+        {/* Protected Dashboard Pages */}
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/dashboard"
+            element={
+              <DashboardLayout pageTitle="Overview">
+                <DashboardHome />
+              </DashboardLayout>
+            }
+          />
 
-        <Route
-          path="/upload-resume"
-          element={
-            <DashboardLayout pageTitle="Upload Resume">
-              <ResumeUpload onBack={() => window.history.back()} />
-            </DashboardLayout>
-          }
-        />
+          <Route
+            path="/resumes"
+            element={
+              <DashboardLayout pageTitle="My Resumes">
+                <MyResumes />
+              </DashboardLayout>
+            }
+          />
 
-        <Route
-          path="/jobs"
-          element={
-            <DashboardLayout pageTitle="Job Descriptions">
-              <JobDescriptions />
-            </DashboardLayout>
-          }
-        />
+          <Route
+            path="/upload-resume"
+            element={
+              <DashboardLayout pageTitle="Upload Resume">
+                <ResumeUpload onBack={() => window.history.back()} />
+              </DashboardLayout>
+            }
+          />
 
-        {/* Start a New Analysis */}
-        <Route
-          path="/analysis"
-          element={
-            <DashboardLayout pageTitle="New Analysis">
-              <NewAnalysis />
-            </DashboardLayout>
-          }
-        />
+          <Route
+            path="/jobs"
+            element={
+              <DashboardLayout pageTitle="Job Descriptions">
+                <JobDescriptions />
+              </DashboardLayout>
+            }
+          />
 
-        {/* View Individual Analysis Results */}
-        <Route
-          path="/analysis/:analysisId"
-          element={
-            <DashboardLayout pageTitle="Analysis Results">
-              <ResumeAnalysis />
-            </DashboardLayout>
-          }
-        />
+          <Route
+            path="/analysis"
+            element={
+              <DashboardLayout pageTitle="New Analysis">
+                <NewAnalysis />
+              </DashboardLayout>
+            }
+          />
 
-        <Route
-          path="/ats"
-          element={
-            <DashboardLayout pageTitle="ATS Analysis">
-              <PagePlaceholder
-                title="ATS Analysis"
-                description="Review ATS compatibility and resume quality."
-              />
-            </DashboardLayout>
-          }
-        />
+          <Route
+            path="/analysis/:analysisId"
+            element={
+              <DashboardLayout pageTitle="Analysis Results">
+                <ResumeAnalysis />
+              </DashboardLayout>
+            }
+          />
 
-        <Route
-          path="/skills"
-          element={
-            <DashboardLayout pageTitle="Skill Gap Analysis">
-              <PagePlaceholder
-                title="Skill Gap Analysis"
-                description="Identify missing skills and areas for improvement."
-              />
-            </DashboardLayout>
-          }
-        />
+          <Route
+            path="/ats"
+            element={
+              <DashboardLayout pageTitle="ATS Analysis">
+                <PagePlaceholder
+                  title="ATS Analysis"
+                  description="Review ATS compatibility and resume quality."
+                />
+              </DashboardLayout>
+            }
+          />
 
-        <Route
-          path="/careers"
-          element={
-            <DashboardLayout pageTitle="Career Recommendations">
-              <PagePlaceholder
-                title="Career Recommendations"
-                description="Explore career paths based on your skills and experience."
-              />
-            </DashboardLayout>
-          }
-        />
+          <Route
+            path="/skills"
+            element={
+              <DashboardLayout pageTitle="Skill Gap Analysis">
+                <PagePlaceholder
+                  title="Skill Gap Analysis"
+                  description="Identify missing skills and areas for improvement."
+                />
+              </DashboardLayout>
+            }
+          />
 
-        {/* Analysis History */}
-        <Route
-          path="/history"
-          element={
-            <DashboardLayout pageTitle="Analysis History">
-              <AnalysisHistory />
-            </DashboardLayout>
-          }
-        />
+          <Route
+            path="/careers"
+            element={
+              <DashboardLayout pageTitle="Career Recommendations">
+                <PagePlaceholder
+                  title="Career Recommendations"
+                  description="Explore career paths based on your skills and experience."
+                />
+              </DashboardLayout>
+            }
+          />
 
-        <Route
-          path="/settings"
-          element={
-            <DashboardLayout pageTitle="Settings">
-              <PagePlaceholder
-                title="Settings"
-                description="Manage your account and application preferences."
-              />
-            </DashboardLayout>
-          }
-        />
-      </Route>
-    </Routes>
+          <Route
+            path="/history"
+            element={
+              <DashboardLayout pageTitle="Analysis History">
+                <AnalysisHistory />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              <DashboardLayout pageTitle="Settings">
+                <PagePlaceholder
+                  title="Settings"
+                  description="Manage your account and application preferences."
+                />
+              </DashboardLayout>
+            }
+          />
+        </Route>
+      </Routes>
+    </>
   );
 }
 
