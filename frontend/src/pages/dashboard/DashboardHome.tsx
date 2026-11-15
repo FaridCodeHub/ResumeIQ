@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import {
   DescriptionRounded,
   AnalyticsRounded,
@@ -11,121 +14,381 @@ import {
 } from '@mui/icons-material';
 
 import {
+  Alert,
   Box,
   Button,
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   Grid,
+  LinearProgress,
   Stack,
   Typography,
-  LinearProgress,
 } from '@mui/material';
 
-import { useNavigate } from 'react-router-dom';
+import { apiRequest } from '../../services/api';
 
-const statistics = [
-  {
-    title: 'Total Resumes',
-    value: '04',
-    subtitle: 'Uploaded resumes',
-    icon: <DescriptionRounded />,
-    color: '#635BFF',
-    background: '#EEEDFF',
-  },
-  {
-    title: 'Analyses Completed',
-    value: '12',
-    subtitle: 'Resume analyses',
-    icon: <AnalyticsRounded />,
-    color: '#0891B2',
-    background: '#E0F7FA',
-  },
-  {
-    title: 'Job Matches',
-    value: '08',
-    subtitle: 'Matched opportunities',
-    icon: <WorkOutlineRounded />,
-    color: '#16A34A',
-    background: '#DCFCE7',
-  },
-  {
-    title: 'Skills Identified',
-    value: '24',
-    subtitle: 'Extracted skills',
-    icon: <PsychologyRounded />,
-    color: '#D97706',
-    background: '#FEF3C7',
-  },
-];
+/* --------------------------------------------------
+   TYPES
+-------------------------------------------------- */
 
-const recentActivities = [
-  {
-    title: 'Frontend Developer Resume',
-    company: 'Sample job description',
-    date: 'October 28, 2026',
-    score: 85,
-    status: 'Completed',
-  },
-  {
-    title: 'Software Engineer Resume',
-    company: 'Sample job description',
-    date: 'October 26, 2026',
-    score: 72,
-    status: 'Completed',
-  },
-  {
-    title: 'UI/UX Designer Resume',
-    company: 'Sample job description',
-    date: 'October 24, 2026',
-    score: 91,
-    status: 'Completed',
-  },
-];
+interface Resume {
+  resumeId: string;
+  resumeTitle: string;
+  originalFileName: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  uploadDate: string;
+}
+
+interface ResumeListResponse {
+  success: boolean;
+  message?: string;
+  resumes: Resume[];
+}
+
+interface AnalysisHistoryItem {
+  analysisId: string;
+  resumeId: string;
+  resumeTitle: string;
+  analysisType: 'general' | 'job_specific';
+  jobId: string | null;
+  overallScore: number;
+  atsScore: number;
+  matchScore: number;
+  createdAt: string;
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+interface AnalysisHistoryPayload {
+  analyses?: AnalysisHistoryItem[];
+  pagination?: Pagination;
+}
+
+interface AnalysisHistoryResponse extends AnalysisHistoryPayload {
+  success?: boolean;
+  message?: string;
+  data?: AnalysisHistoryPayload;
+  history?: AnalysisHistoryPayload;
+}
+
+interface AnalysisResultPayload {
+  result?: Record<string, unknown> | null;
+}
+
+interface AnalysisResultResponse extends AnalysisResultPayload {
+  success?: boolean;
+  data?: AnalysisResultPayload;
+  analysis?: AnalysisResultPayload;
+}
+
+/* --------------------------------------------------
+   HELPERS
+-------------------------------------------------- */
+
+function formatDate(date: string): string {
+  if (!date) return 'Date unavailable';
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return 'Date unavailable';
+  }
+
+  return parsedDate.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatScore(score: number | null): string {
+  if (score === null || !Number.isFinite(score)) {
+    return '—';
+  }
+
+  return `${Number(score.toFixed(1))}%`;
+}
+
+function getSkillName(skill: unknown): string | null {
+  if (typeof skill === 'string') {
+    return skill.trim() || null;
+  }
+
+  if (typeof skill === 'object' && skill !== null) {
+    const item = skill as Record<string, unknown>;
+
+    const possibleNames = [
+      item.skillName,
+      item.name,
+      item.skill,
+    ];
+
+    const name = possibleNames.find(
+      (value) =>
+        typeof value === 'string' && value.trim().length > 0,
+    );
+
+    return typeof name === 'string' ? name.trim() : null;
+  }
+
+  return null;
+}
+
+function getUniqueSkillCount(
+  result: Record<string, unknown> | null,
+): number {
+  if (!result) return 0;
+
+  const technicalSkills = Array.isArray(result.technicalSkills)
+    ? result.technicalSkills
+    : [];
+
+  const softSkills = Array.isArray(result.softSkills)
+    ? result.softSkills
+    : [];
+
+  const allSkills = [...technicalSkills, ...softSkills];
+
+  const uniqueSkills = new Set(
+    allSkills
+      .map(getSkillName)
+      .filter((skill): skill is string => Boolean(skill))
+      .map((skill) => skill.toLowerCase()),
+  );
+
+  return uniqueSkills.size;
+}
+
+/* --------------------------------------------------
+   COMPONENT
+-------------------------------------------------- */
 
 function DashboardHome() {
   const navigate = useNavigate();
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [totalResumes, setTotalResumes] = useState(0);
+  const [totalAnalyses, setTotalAnalyses] = useState(0);
+  const [jobMatches, setJobMatches] = useState(0);
+  const [skillsIdentified, setSkillsIdentified] = useState(0);
+
+  const [latestScore, setLatestScore] = useState<number | null>(null);
+
+  const [recentAnalyses, setRecentAnalyses] = useState<
+    AnalysisHistoryItem[]
+  >([]);
+
+  /* --------------------------------------------------
+     LOAD DASHBOARD DATA
+  -------------------------------------------------- */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDashboard() {
+      setLoading(true);
+      setError('');
+
+      try {
+        const [resumeResponse, historyResponse] = await Promise.all([
+          apiRequest<ResumeListResponse>('/resumes'),
+
+          apiRequest<AnalysisHistoryResponse>(
+            '/analysis?page=1&limit=5',
+          ),
+        ]);
+
+        if (cancelled) return;
+
+        // Resume statistics
+        const resumes = Array.isArray(resumeResponse.resumes)
+          ? resumeResponse.resumes
+          : [];
+
+        setTotalResumes(resumes.length);
+
+        // Handle direct or wrapped history responses
+        const historyPayload =
+          historyResponse.data ??
+          historyResponse.history ??
+          historyResponse;
+
+        const analyses = Array.isArray(historyPayload.analyses)
+          ? historyPayload.analyses
+          : [];
+
+        const pagination = historyPayload.pagination;
+
+        setRecentAnalyses(analyses);
+
+        // Total analysis count
+        setTotalAnalyses(
+          typeof pagination?.total === 'number'
+            ? pagination.total
+            : analyses.length,
+        );
+
+        // Count job-specific analyses in the latest five records
+        setJobMatches(
+          analyses.filter(
+            (analysis) => analysis.analysisType === 'job_specific',
+          ).length,
+        );
+
+        // Latest analysis score and extracted skills
+        if (analyses.length > 0) {
+          setLatestScore(Number(analyses[0].overallScore));
+
+          try {
+            const latestAnalysis =
+              await apiRequest<AnalysisResultResponse>(
+                `/analysis/${analyses[0].analysisId}`,
+              );
+
+            if (cancelled) return;
+
+            const detail =
+              latestAnalysis.data ??
+              latestAnalysis.analysis ??
+              latestAnalysis;
+
+            setSkillsIdentified(
+              getUniqueSkillCount(detail.result ?? null),
+            );
+          } catch {
+            setSkillsIdentified(0);
+          }
+        } else {
+          setLatestScore(null);
+          setSkillsIdentified(0);
+        }
+      } catch (err) {
+        if (cancelled) return;
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to load dashboard information.',
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* --------------------------------------------------
+     STATISTICS
+  -------------------------------------------------- */
+
+  const statistics = [
+    {
+      title: 'Total Resumes',
+      value: totalResumes.toString().padStart(2, '0'),
+      subtitle: 'Uploaded resumes',
+      icon: <DescriptionRounded />,
+      color: '#635BFF',
+      background: '#EEEDFF',
+    },
+    {
+      title: 'Analyses Completed',
+      value: totalAnalyses.toString().padStart(2, '0'),
+      subtitle: 'Resume analyses',
+      icon: <AnalyticsRounded />,
+      color: '#0891B2',
+      background: '#E0F7FA',
+    },
+    {
+      title: 'Job-Specific Analyses',
+      value: jobMatches.toString().padStart(2, '0'),
+      subtitle: 'From latest 5 analyses',
+      icon: <WorkOutlineRounded />,
+      color: '#16A34A',
+      background: '#DCFCE7',
+    },
+    {
+      title: 'Skills Identified',
+      value: skillsIdentified.toString().padStart(2, '0'),
+      subtitle: 'From latest analysis',
+      icon: <PsychologyRounded />,
+      color: '#D97706',
+      background: '#FEF3C7',
+    },
+  ];
+
+  /* --------------------------------------------------
+     LOADING STATE
+  -------------------------------------------------- */
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          minHeight: 300,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 1.5,
+        }}
+      >
+        <CircularProgress sx={{ color: '#635BFF' }} />
+
+        <Typography color="text.secondary" fontSize={13}>
+          Loading your dashboard...
+        </Typography>
+      </Box>
+    );
+  }
+
+  /* --------------------------------------------------
+     MAIN DASHBOARD
+  -------------------------------------------------- */
+
   return (
-    <Box>
+    <Box sx={{ pb: 2 }}>
       {/* Welcome Section */}
+
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         justifyContent="space-between"
         alignItems={{ xs: 'flex-start', sm: 'center' }}
-        spacing={2}
-        sx={{ mb: 4 }}
+        spacing={1.5}
+        sx={{ mb: 2.5 }}
       >
         <Box>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 800,
-              letterSpacing: '-1px',
-              color: '#172033',
-              fontSize: { xs: '1.6rem', sm: '2rem' },
-            }}
-          >
-            Dashboard Overview
-          </Typography>
-
-          <Typography
-            color="text.secondary"
-            sx={{ mt: 1, fontSize: 14 }}
-          >
+          <Typography color="text.secondary" fontSize={13}>
             Track your resume performance and career progress.
           </Typography>
         </Box>
 
         <Button
           variant="contained"
+          size="small"
           startIcon={<AddRounded />}
           onClick={() => navigate('/upload-resume')}
           sx={{
             bgcolor: '#635BFF',
             borderRadius: 2,
-            px: 2.5,
-            py: 1.2,
+            px: 2,
+            py: 0.9,
             textTransform: 'none',
             fontWeight: 700,
             '&:hover': {
@@ -137,19 +400,26 @@ function DashboardHome() {
         </Button>
       </Stack>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       {/* Statistics Cards */}
-      <Grid container spacing={2.5} sx={{ mb: 4 }}>
+
+      <Grid container spacing={2} sx={{ mb: 2.5 }}>
         {statistics.map((item) => (
           <Grid item xs={12} sm={6} lg={3} key={item.title}>
             <Card
               elevation={0}
               sx={{
                 border: '1px solid #E8EDF4',
-                borderRadius: 3,
+                borderRadius: 2.5,
                 height: '100%',
               }}
             >
-              <CardContent sx={{ p: 2.5 }}>
+              <CardContent sx={{ p: 2 }}>
                 <Stack
                   direction="row"
                   justifyContent="space-between"
@@ -159,8 +429,8 @@ function DashboardHome() {
                     <Typography
                       sx={{
                         color: '#64748B',
-                        fontSize: 13,
-                        fontWeight: 600,
+                        fontSize: 12,
+                        fontWeight: 650,
                       }}
                     >
                       {item.title}
@@ -168,10 +438,11 @@ function DashboardHome() {
 
                     <Typography
                       sx={{
-                        fontSize: 29,
+                        fontSize: 25,
                         fontWeight: 800,
                         color: '#172033',
-                        mt: 1,
+                        mt: 0.7,
+                        lineHeight: 1.2,
                       }}
                     >
                       {item.value}
@@ -180,8 +451,8 @@ function DashboardHome() {
                     <Typography
                       sx={{
                         color: '#94A3B8',
-                        fontSize: 12,
-                        mt: 0.5,
+                        fontSize: 11,
+                        mt: 0.4,
                       }}
                     >
                       {item.subtitle}
@@ -190,13 +461,17 @@ function DashboardHome() {
 
                   <Box
                     sx={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 2.5,
+                      width: 42,
+                      height: 42,
+                      borderRadius: 2,
                       display: 'grid',
                       placeItems: 'center',
                       color: item.color,
                       bgcolor: item.background,
+                      flexShrink: 0,
+                      '& svg': {
+                        fontSize: 21,
+                      },
                     }}
                   >
                     {item.icon}
@@ -209,94 +484,97 @@ function DashboardHome() {
       </Grid>
 
       {/* Resume Score and Quick Actions */}
-      <Grid container spacing={2.5} sx={{ mb: 4 }}>
+
+      <Grid container spacing={2} sx={{ mb: 2.5 }}>
         <Grid item xs={12} md={7}>
           <Card
             elevation={0}
             sx={{
               border: '1px solid #E8EDF4',
-              borderRadius: 3,
+              borderRadius: 2.5,
               height: '100%',
             }}
           >
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-              <Typography variant="h6" fontWeight={800}>
+            <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+              <Typography variant="subtitle1" fontWeight={750}>
                 Resume Performance
               </Typography>
 
               <Typography
                 color="text.secondary"
-                sx={{ fontSize: 13, mt: 0.5, mb: 3 }}
+                sx={{ fontSize: 12, mt: 0.5, mb: 2 }}
               >
-                Illustrative resume quality overview.
+                Your latest resume quality score.
               </Typography>
 
               <Stack
                 direction="row"
                 alignItems="center"
-                spacing={3}
-                sx={{ mb: 3 }}
+                spacing={2.5}
+                sx={{ mb: 2 }}
               >
                 <Box>
                   <Typography
                     sx={{
-                      fontSize: 46,
+                      fontSize: 38,
                       fontWeight: 850,
                       color: '#635BFF',
                       lineHeight: 1.2,
+                      letterSpacing: '-1px',
                     }}
                   >
-                    85%
+                    {formatScore(latestScore)}
                   </Typography>
 
                   <Stack
                     direction="row"
                     alignItems="center"
-                    spacing={0.5}
+                    spacing={0.4}
                   >
                     <TrendingUpRounded
-                      sx={{ color: '#16A34A', fontSize: 17 }}
+                      sx={{ color: '#16A34A', fontSize: 15 }}
                     />
 
                     <Typography
                       sx={{
                         color: '#16A34A',
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: 700,
                       }}
                     >
-                      Sample score
+                      Latest analysis
                     </Typography>
                   </Stack>
                 </Box>
 
                 <Box
                   sx={{
-                    width: 1,
-                    height: 65,
+                    width: '1px',
+                    height: 55,
                     bgcolor: '#E8EDF4',
+                    flexShrink: 0,
                   }}
                 />
 
                 <Box>
-                  <Typography fontWeight={700}>
+                  <Typography fontWeight={700} fontSize={13}>
                     Resume quality
                   </Typography>
 
                   <Typography
                     color="text.secondary"
-                    sx={{ fontSize: 12, mt: 0.5 }}
+                    sx={{ fontSize: 11, mt: 0.4 }}
                   >
-                    Example performance indicator
+                    Based on your latest analysis
                   </Typography>
                 </Box>
               </Stack>
 
               <LinearProgress
                 variant="determinate"
-                value={85}
+                value={Math.min(Math.max(latestScore ?? 0, 0), 100)}
                 sx={{
-                  height: 10,
+                  height: 8,
                   borderRadius: 5,
                   bgcolor: '#EEEDFF',
                   '& .MuiLinearProgress-bar': {
@@ -308,10 +586,11 @@ function DashboardHome() {
 
               <Typography
                 color="text.secondary"
-                sx={{ fontSize: 12, mt: 2 }}
+                sx={{ fontSize: 11, mt: 1.5 }}
               >
-                Actual scores will be calculated after implementing the
-                resume analysis engine.
+                {latestScore === null
+                  ? 'Complete your first resume analysis to see your score.'
+                  : 'This score represents your most recently analyzed resume.'}
               </Typography>
             </CardContent>
           </Card>
@@ -322,25 +601,30 @@ function DashboardHome() {
             elevation={0}
             sx={{
               border: '1px solid #E8EDF4',
-              borderRadius: 3,
+              borderRadius: 2.5,
               height: '100%',
             }}
           >
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={800} sx={{ mb: 2.5 }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Typography
+                variant="subtitle1"
+                fontWeight={750}
+                sx={{ mb: 1.5 }}
+              >
                 Quick Actions
               </Typography>
 
-              <Stack spacing={1.5}>
+              <Stack spacing={1}>
                 <Button
                   fullWidth
+                  size="small"
                   variant="contained"
                   startIcon={<CloudUploadRounded />}
                   onClick={() => navigate('/upload-resume')}
                   sx={{
                     justifyContent: 'flex-start',
                     bgcolor: '#635BFF',
-                    py: 1.4,
+                    py: 1.1,
                     textTransform: 'none',
                     borderRadius: 2,
                     '&:hover': { bgcolor: '#5046E5' },
@@ -351,6 +635,7 @@ function DashboardHome() {
 
                 <Button
                   fullWidth
+                  size="small"
                   variant="outlined"
                   startIcon={<WorkOutlineRounded />}
                   onClick={() => navigate('/jobs')}
@@ -358,7 +643,7 @@ function DashboardHome() {
                     justifyContent: 'flex-start',
                     color: '#475569',
                     borderColor: '#E2E8F0',
-                    py: 1.4,
+                    py: 1.1,
                     textTransform: 'none',
                     borderRadius: 2,
                   }}
@@ -368,6 +653,7 @@ function DashboardHome() {
 
                 <Button
                   fullWidth
+                  size="small"
                   variant="outlined"
                   startIcon={<AutoAwesomeRounded />}
                   onClick={() => navigate('/analysis')}
@@ -375,7 +661,7 @@ function DashboardHome() {
                     justifyContent: 'flex-start',
                     color: '#475569',
                     borderColor: '#E2E8F0',
-                    py: 1.4,
+                    py: 1.1,
                     textTransform: 'none',
                     borderRadius: 2,
                   }}
@@ -388,119 +674,168 @@ function DashboardHome() {
         </Grid>
       </Grid>
 
-      {/* Recent Analysis */}
+      {/* Recent Analyses */}
+
       <Card
         elevation={0}
         sx={{
           border: '1px solid #E8EDF4',
-          borderRadius: 3,
+          borderRadius: 2.5,
         }}
       >
-        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2.5 } }}>
           <Stack
             direction="row"
             justifyContent="space-between"
             alignItems="center"
-            sx={{ mb: 3 }}
+            sx={{ mb: 2 }}
           >
             <Box>
-              <Typography variant="h6" fontWeight={800}>
+              <Typography variant="subtitle1" fontWeight={750}>
                 Recent Analyses
               </Typography>
 
               <Typography
                 color="text.secondary"
-                sx={{ fontSize: 13, mt: 0.5 }}
+                sx={{ fontSize: 12, mt: 0.3 }}
               >
                 Your latest resume analysis activities.
               </Typography>
             </Box>
 
             <Button
+              size="small"
               endIcon={<ArrowForwardRounded />}
               onClick={() => navigate('/history')}
               sx={{
                 color: '#635BFF',
                 textTransform: 'none',
                 fontWeight: 700,
+                whiteSpace: 'nowrap',
               }}
             >
               View All
             </Button>
           </Stack>
 
-          <Stack spacing={0}>
-            {recentActivities.map((activity, index) => (
-              <Box
-                key={activity.title}
+          {recentAnalyses.length === 0 ? (
+            <Box
+              sx={{
+                py: 3,
+                textAlign: 'center',
+              }}
+            >
+              <AnalyticsRounded
+                sx={{ fontSize: 36, color: '#CBD5E1', mb: 0.5 }}
+              />
+
+              <Typography fontWeight={700} color="#475569" fontSize={14}>
+                No analyses yet
+              </Typography>
+
+              <Typography
+                color="text.secondary"
+                sx={{ fontSize: 12, mt: 0.5, mb: 1.5 }}
+              >
+                Upload a resume and complete your first analysis.
+              </Typography>
+
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => navigate('/analysis')}
                 sx={{
-                  display: 'flex',
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  alignItems: { xs: 'flex-start', sm: 'center' },
-                  justifyContent: 'space-between',
-                  gap: 2,
-                  py: 2,
-                  borderBottom:
-                    index !== recentActivities.length - 1
-                      ? '1px solid #F1F5F9'
-                      : 'none',
+                  bgcolor: '#635BFF',
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: '#5046E5' },
                 }}
               >
-                <Box>
-                  <Typography fontWeight={700} sx={{ fontSize: 14 }}>
-                    {activity.title}
-                  </Typography>
-
-                  <Typography
-                    color="text.secondary"
-                    sx={{ fontSize: 12, mt: 0.5 }}
-                  >
-                    {activity.company} • {activity.date}
-                  </Typography>
-                </Box>
-
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  spacing={2}
+                Start Analysis
+              </Button>
+            </Box>
+          ) : (
+            <Stack spacing={0}>
+              {recentAnalyses.map((activity, index) => (
+                <Box
+                  key={activity.analysisId}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: { xs: 'flex-start', sm: 'center' },
+                    justifyContent: 'space-between',
+                    gap: 1.5,
+                    py: 1.5,
+                    borderBottom:
+                      index !== recentAnalyses.length - 1
+                        ? '1px solid #F1F5F9'
+                        : 'none',
+                  }}
                 >
-                  <Chip
-                    label={activity.status}
-                    size="small"
-                    sx={{
-                      bgcolor: '#DCFCE7',
-                      color: '#15803D',
-                      fontWeight: 700,
-                    }}
-                  />
+                  <Box>
+                    <Typography fontWeight={700} sx={{ fontSize: 13 }}>
+                      {activity.resumeTitle}
+                    </Typography>
 
-                  <Typography
-                    sx={{
-                      color: '#635BFF',
-                      fontWeight: 800,
-                      fontSize: 16,
-                      minWidth: 45,
-                      textAlign: 'right',
-                    }}
+                    <Typography
+                      color="text.secondary"
+                      sx={{ fontSize: 11, mt: 0.4 }}
+                    >
+                      {activity.analysisType === 'job_specific'
+                        ? 'Job-specific analysis'
+                        : 'General resume analysis'}
+                      {' • '}
+                      {formatDate(activity.createdAt)}
+                    </Typography>
+                  </Box>
+
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={1.5}
                   >
-                    {activity.score}%
-                  </Typography>
-                </Stack>
-              </Box>
-            ))}
-          </Stack>
+                    <Chip
+                      label="Completed"
+                      size="small"
+                      sx={{
+                        height: 23,
+                        bgcolor: '#DCFCE7',
+                        color: '#15803D',
+                        fontWeight: 700,
+                        fontSize: 10,
+                      }}
+                    />
+
+                    <Typography
+                      sx={{
+                        color: '#635BFF',
+                        fontWeight: 800,
+                        fontSize: 14,
+                        minWidth: 55,
+                        textAlign: 'right',
+                      }}
+                    >
+                      {formatScore(Number(activity.overallScore))}
+                    </Typography>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
+          )}
         </CardContent>
       </Card>
 
-      {/* Sample Data Notice */}
-      <Box sx={{ mt: 3 }}>
+      {/* Live Data Notice */}
+
+      <Box sx={{ mt: 2 }}>
         <Chip
-          label="Demo dashboard — sample data only"
+          label="Live data — connected to your account"
           size="small"
           sx={{
-            bgcolor: '#FFF7ED',
-            color: '#C2410C',
+            height: 24,
+            bgcolor: '#DCFCE7',
+            color: '#15803D',
             fontWeight: 600,
+            fontSize: 11,
           }}
         />
       </Box>

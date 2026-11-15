@@ -7,6 +7,12 @@ import cookieParser from 'cookie-parser';
 import { testDatabaseConnection } from './config/db.js';
 import authRoutes from './routes/auth.routes.js';
 import resumeRoutes from './routes/resume.routes.js';
+import userAISettingsRoutes from './routes/user-ai-settings.routes.js';
+import analysisRoutes from './routes/analysis.routes.js';
+import jobRoutes from './routes/job.routes.js';
+/*Admin based control */
+import skillCatalogRoutes from './routes/skill-catalog.routes.js';
+import adminAuditRoutes from './routes/admin-audit.routes.js';
 const app = express();
 
 const PORT = Number(process.env.PORT) || 5001;
@@ -48,6 +54,15 @@ app.get('/api/health', (_req, res) => {
 // Authentication routes
 app.use('/api/auth', authRoutes);
 app.use('/api/resumes', resumeRoutes);
+app.use('/api/jobs', jobRoutes);
+// AI Setting
+app.use('/api/user/ai-settings', userAISettingsRoutes);
+//Skill Catalog
+app.use('/api/admin/skills', skillCatalogRoutes);
+// Analysis endpoint
+app.use('/api/analysis', analysisRoutes);
+// Admin Audit Logs
+app.use('/api/admin/audit-logs', adminAuditRoutes);
 // Start server after database connection
 async function startServer(): Promise<void> {
   try {

@@ -13,6 +13,10 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 import DashboardHome from '../pages/dashboard/DashboardHome';
 import ResumeUpload from '../pages/ResumeUpload';
 import MyResumes from '../pages/MyResumes';
+import AnalysisHistory from '../pages/AnalysisHistory';
+import NewAnalysis from '../pages/NewAnalysis';
+import ResumeAnalysis from '../pages/ResumeAnalysis';
+import JobDescriptions from '../pages/JobDescriptions';
 
 function AppRoutes() {
   return (
@@ -56,22 +60,27 @@ function AppRoutes() {
           path="/jobs"
           element={
             <DashboardLayout pageTitle="Job Descriptions">
-              <PagePlaceholder
-                title="Job Descriptions"
-                description="Add and manage job descriptions for resume analysis."
-              />
+              <JobDescriptions />
             </DashboardLayout>
           }
         />
 
+        {/* Start a New Analysis */}
         <Route
           path="/analysis"
           element={
-            <DashboardLayout pageTitle="Resume Analysis">
-              <PagePlaceholder
-                title="Resume Analysis"
-                description="Analyze your resume against a selected job description."
-              />
+            <DashboardLayout pageTitle="New Analysis">
+              <NewAnalysis />
+            </DashboardLayout>
+          }
+        />
+
+        {/* View Individual Analysis Results */}
+        <Route
+          path="/analysis/:analysisId"
+          element={
+            <DashboardLayout pageTitle="Analysis Results">
+              <ResumeAnalysis />
             </DashboardLayout>
           }
         />
@@ -112,14 +121,12 @@ function AppRoutes() {
           }
         />
 
+        {/* Analysis History */}
         <Route
           path="/history"
           element={
             <DashboardLayout pageTitle="Analysis History">
-              <PagePlaceholder
-                title="Analysis History"
-                description="Review your previous resume analyses."
-              />
+              <AnalysisHistory />
             </DashboardLayout>
           }
         />
