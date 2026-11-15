@@ -92,22 +92,32 @@ function Sidebar({ onNavigate }: SidebarProps) {
         borderRight: '1px solid #E8EDF4',
       }}
     >
-      {/* Logo */}
-      <Box
-        sx={{
-          px: 3,
-          py: 3,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-        }}
-      >
-        <AutoAwesomeRounded sx={{ color: '#635BFF', fontSize: 32 }} />
+    {/* Logo */}
+    <Box
+      onClick={() => {
+        onNavigate?.();
+        navigate('/');
+      }}
+      sx={{
+        px: 3,
+        py: 3,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        cursor: 'pointer',
+        transition: 'opacity 0.2s ease',
 
-        <Typography variant="h5" fontWeight={800} letterSpacing="-1px">
-          Resume<span style={{ color: '#635BFF' }}>IQ</span>
-        </Typography>
-      </Box>
+        '&:hover': {
+          opacity: 0.75,
+        },
+      }}
+    >
+      <AutoAwesomeRounded sx={{ color: '#635BFF', fontSize: 32 }} />
+
+      <Typography variant="h5" fontWeight={800} letterSpacing="-1px">
+        Resume<span style={{ color: '#635BFF' }}>IQ</span>
+      </Typography>
+    </Box>
 
       <Divider />
 
