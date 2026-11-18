@@ -16,12 +16,25 @@ import {
   Divider,
 } from '@mui/material';
 
+import { useAuth } from '../../context/AuthContext';
+
 interface TopbarProps {
   onMenuClick: () => void;
   pageTitle: string;
 }
 
 function Topbar({ onMenuClick, pageTitle }: TopbarProps) {
+  const { user } = useAuth();
+
+  // Get the first letter of the logged-in user's name
+  const userInitial = user?.name?.trim().charAt(0).toUpperCase() || 'U';
+
+  // Get the user's name
+  const userName = user?.name || 'User';
+
+  // Get the user's role
+  const userRole = user?.role === 'admin' ? 'Admin' : 'User';
+
   return (
     <AppBar
       position="sticky"
@@ -121,7 +134,7 @@ function Topbar({ onMenuClick, pageTitle }: TopbarProps) {
           }}
         />
 
-        {/* User Profile */}
+        {/* Dynamic User Profile */}
         <Box
           sx={{
             display: 'flex',
@@ -139,7 +152,7 @@ function Topbar({ onMenuClick, pageTitle }: TopbarProps) {
               fontWeight: 700,
             }}
           >
-            F
+            {userInitial}
           </Avatar>
 
           <Box sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -150,7 +163,7 @@ function Topbar({ onMenuClick, pageTitle }: TopbarProps) {
                 color: '#172033',
               }}
             >
-              Farid
+              {userName}
             </Typography>
 
             <Typography
@@ -159,7 +172,7 @@ function Topbar({ onMenuClick, pageTitle }: TopbarProps) {
                 color: '#94A3B8',
               }}
             >
-              Student
+              {userRole}
             </Typography>
           </Box>
 
