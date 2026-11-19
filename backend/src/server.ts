@@ -68,10 +68,8 @@ async function startServer(): Promise<void> {
   try {
     await testDatabaseConnection();
 
-    app.listen(PORT, () => {
-      console.log(
-        'ResumeIQ API running on http://localhost:' + PORT
-      );
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`ResumeIQ API running on port ${PORT}`);
     });
   } catch (error) {
     console.error('Failed to start ResumeIQ API:', error);
